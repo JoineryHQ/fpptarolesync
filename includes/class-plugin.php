@@ -18,7 +18,7 @@ class FpptarolesyncPlugin {
     // For easier in-browser testing, you can enable this line, which will,
     // whenever you view your own WP user profile, fire the same checks as
     // would be done upon login:
-    add_action('show_user_profile', [$this, 'show_user_profile']);
+    // add_action('show_user_profile', [$this, 'show_user_profile']);
   }
 
   /**
