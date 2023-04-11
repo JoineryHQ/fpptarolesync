@@ -24,6 +24,7 @@ class FpptarolesyncUtil {
         $message = "{$messagePrefix} :: $message";
       }
       // Log to our own 'fpptarolesync' log file in ConfigAndLog with
+      // See also: https://docs.civicrm.org/dev/en/latest/framework/logging/
       CRM_Core_Error::debug_log_message($message, FALSE, 'fpptarolesync');
     }
   }
@@ -74,6 +75,7 @@ class FpptarolesyncUtil {
       ->addWhere('contact_id', 'IN', $cids)
       ->setLimit(0)
       ->addChain('membership_status', \Civi\Api4\MembershipStatus::get()
+        ->setCheckPermissions(FALSE)
         ->addWhere('id', '=', '$status_id'),
       0)
       ->execute();
@@ -126,6 +128,7 @@ class FpptarolesyncUtil {
       $cids[$membershipId] = [];
       // Get membership type and owner_membership_id
       $membership = \Civi\Api4\Membership::get()
+        ->setCheckPermissions(FALSE)
         ->addSelect('membership_type_id', 'owner_membership_id', 'contact_id')
         ->addWhere('id', '=', $membershipId)
         ->setLimit(1)
