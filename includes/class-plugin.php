@@ -19,6 +19,9 @@ class FpptarolesyncPlugin {
     // whenever you view your own WP user profile, fire the same checks as
     // would be done upon login:
     // add_action('show_user_profile', [$this, 'show_user_profile']);
+
+    // Implement hook_civicrm_merge
+    add_action('civicrm_merge', [$this, 'civicrm_merge'], 10, 5);
   }
 
   /**
@@ -130,4 +133,33 @@ class FpptarolesyncPlugin {
     }
   }
 
+  /**
+   * Action handler for hook_civicrm_merge.
+   */
+  public function civicrm_merge($type, &$data, $mainId = NULL, $otherId = NULL, $tables = NULL) {
+    if ($type == 'sqls') {
+      // For the list of SQL queries that will be used to merge these contacts, prepend
+      // a query to cover important merge tasks not covered by CiviCRM core.
+      $mainId = (int) $mainId;
+      $otherId = (int) $otherId;
+      $prependSqls = [
+        // Ensure preserved relationship is enabled if trashed relationship was.
+        // If we don't do this, individuals who currently have active relationships
+        // may end up with them being inactive
+        // (reference https://lab.civicrm.org/dev/core/-/issues/1783), which can
+        // have the effect of denying them access to members-only resources.
+        "UPDATE civicrm_relationship rMain
+          INNER JOIN civicrm_relationship rOther
+            ON rMain.relationship_type_id = rOther.relationship_type_id
+            AND rMain.contact_id_a = rOther.contact_id_a
+            AND rOther.contact_id_b = $otherId
+            AND rMain.contact_id_b = $mainId
+            AND not rMain.is_active
+            AND rOther.is_active
+          SET rMain.is_active = 1
+        ",
+      ];
+      $data = array_merge($prependSqls, $data);
+    }
+  }
 }
