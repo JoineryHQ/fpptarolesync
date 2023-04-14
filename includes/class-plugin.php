@@ -9,7 +9,7 @@ class FpptarolesyncPlugin {
    * Execute all of the hooks with WordPress.
    */
   public function run() {
-    // Implement hook_civicrm_post
+    // Implement hook_civicrm_postCommit
     add_action('civicrm_postCommit', [$this, 'civicrm_postCommit'], 10, 4);
     // Implement hook_civicrm_pre
     add_action('civicrm_pre', [$this, 'civicrm_pre'], 10, 4);
@@ -129,6 +129,33 @@ class FpptarolesyncPlugin {
         $objectRef->contact_id_a,
         $objectRef->contact_id_b,
       ];
+      FpptarolesyncUtil::updateRolesForCids($cidsToUpdate);
+    }
+    elseif (
+      $objectName == 'Contact' && $op == 'merge'
+    ) {
+      // This contact has just been retained after a duplicate merge.
+      // Load the contact.
+      $contactGet = $contacts = \Civi\Api4\Contact::get()
+        ->setCheckPermissions(FALSE)
+        ->addSelect('contact_type')
+        ->addWhere('id', '=', $objectId)
+        ->setLimit(1)
+        ->execute()
+        ->first();
+      $cidsToUpdate = [];
+      switch ($contactGet['contact_type']) {
+        case 'Organization':
+          // If this is an organization, we'll update role for all related employee individuals.
+          $cidsToUpdate = FpptarolesyncUtil::getRelatedCidsForContact($objectId);
+          break;
+
+        case 'Individual':
+          // If this is an individual, we'll update role for this individual only.
+          $cidsToUpdate = [$objectId];
+          break;
+
+      }
       FpptarolesyncUtil::updateRolesForCids($cidsToUpdate);
     }
   }
