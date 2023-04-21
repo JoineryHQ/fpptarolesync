@@ -16,7 +16,7 @@
  * Plugin Name:       CiviCRM Membership Role Sync for FPPTA
  * Plugin URI:        https://github.com/joineryhq/fpptarolesync
  * Description:       Provides synchronization of a single WordPress role based on CiviCRM data related to Memberships, Relationships, and Contributions, per the unique needs of FPPTA.
- * Version:           1.0.2
+ * Version:           1.1.0
  * Author:            Allen Shaw, Joinery
  * Author URI:        https://joineryhq.com
  * License:           GPL-2.0+
