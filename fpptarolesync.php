@@ -41,6 +41,7 @@ function fpptarolesync_run() {
   // Include important class files.
   require plugin_dir_path(__FILE__) . 'includes/class-plugin.php';
   require plugin_dir_path(__FILE__) . 'includes/class-util.php';
+  require plugin_dir_path(__FILE__) . 'includes/class-settings.php';
 
   $plugin = new FpptarolesyncPlugin();
   $plugin->run();

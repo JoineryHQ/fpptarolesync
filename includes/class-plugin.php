@@ -19,9 +19,12 @@ class FpptarolesyncPlugin {
     // whenever you view your own WP user profile, fire the same checks as
     // would be done upon login:
     // add_action('show_user_profile', [$this, 'show_user_profile']);
-
     // Implement hook_civicrm_merge
     add_action('civicrm_merge', [$this, 'civicrm_merge'], 10, 5);
+
+    // Register a settings page for "fppta" page.
+    add_action('admin_init', ['FpptarolesyncSettings', 'admin_init']);
+    add_action('admin_menu', array('FpptarolesyncSettings', 'addPluginAdminMenu'), 9);
   }
 
   /**
@@ -55,11 +58,9 @@ class FpptarolesyncPlugin {
     if (!FpptarolesyncUtil::pluginIsConfigured()) {
       return;
     }
+    $options = get_option('fpptarolesync_options');
     if (
-      $objectName == 'Membership' 
-      && $op == 'delete' 
-      && empty($params[$objectId]['owner_membership_id']) 
-      && in_array($params[$objectId]['membership_type_id'], FPPTAROLESYNC_MEMBERSHIP_TYPE_IDS)
+      $objectName == 'Membership' && $op == 'delete' && empty($params[$objectId]['owner_membership_id']) && in_array($params[$objectId]['membership_type_id'], $options['membership_type_ids'])
     ) {
       // Only when deleting a primary membership of the relevant type.
       $membershipId = $objectId;
@@ -67,8 +68,7 @@ class FpptarolesyncPlugin {
       Civi::$statics[__CLASS__]['cidsToUpdate']['membership'][$membershipId] = FpptarolesyncUtil::getRelatedCidsForMembership($membershipId);
     }
     elseif (
-      $objectName == 'Contribution' 
-      && $op == 'delete'
+      $objectName == 'Contribution' && $op == 'delete'
     ) {
       // Only when deleting a contribution.
       $contributionId = $objectId;
@@ -154,7 +154,6 @@ class FpptarolesyncPlugin {
           // If this is an individual, we'll update role for this individual only.
           $cidsToUpdate = [$objectId];
           break;
-
       }
       FpptarolesyncUtil::updateRolesForCids($cidsToUpdate);
     }
@@ -189,4 +188,5 @@ class FpptarolesyncPlugin {
       $data = array_merge($prependSqls, $data);
     }
   }
+
 }

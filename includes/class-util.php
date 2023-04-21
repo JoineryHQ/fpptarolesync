@@ -19,12 +19,14 @@ class FpptarolesyncUtil {
    * @param String $messagePrefix An option string to prepend to $message.
    */
   public static function debugLog($message, $messagePrefix = NULL) {
-    if (defined('FPPTAROLESYNC_LOG') && FPPTAROLESYNC_LOG) {
+    $options = get_option('fpptarolesync_options');
+    if ($options['logging'] ?? 0) {
       if ($messagePrefix) {
         $message = "{$messagePrefix} :: $message";
       }
       // Log to our own 'fpptarolesync' log file in ConfigAndLog with
       // See also: https://docs.civicrm.org/dev/en/latest/framework/logging/
+      civicrm_initialize();
       CRM_Core_Error::debug_log_message($message, FALSE, 'fpptarolesync');
     }
   }
@@ -36,14 +38,15 @@ class FpptarolesyncUtil {
    * @param bool $addRole If true, add the role; otherwise remove it.
    */
   public static function setUserRole(WP_User $user, $addRole = TRUE) {
-    $roleName = FPPTAROLESYNC_ROLENAME;
+    $options = get_option('fpptarolesync_options');
+    $roleName = $options['role'] ?? NULL;
     if ($addRole) {
-      self::debugLog('Add role for user ' . $user->ID, __METHOD__);
-      $user->add_role(FPPTAROLESYNC_ROLENAME);
+      self::debugLog('Add role "' . $roleName . '" for user ' . $user->ID, __METHOD__);
+      $user->add_role($roleName);
     }
     else {
-      self::debugLog('Remove role for user ' . $user->ID, __METHOD__);
-      $user->remove_role(FPPTAROLESYNC_ROLENAME);
+      self::debugLog('Remove role "' . $roleName . '" for user ' . $user->ID, __METHOD__);
+      $user->remove_role($roleName);
     }
   }
 
@@ -68,9 +71,10 @@ class FpptarolesyncUtil {
     $cids = array_merge($cids, $relatedCids);
     // Find all memberships for our list of contacts, where membership_type is one
     // of our relevant types, and contact is primary member (not inherited).
+    $options = get_option('fpptarolesync_options');
     $memberships = \Civi\Api4\Membership::get()
       ->setCheckPermissions(FALSE)
-      ->addWhere('membership_type_id', 'IN', FPPTAROLESYNC_MEMBERSHIP_TYPE_IDS)
+      ->addWhere('membership_type_id', 'IN', $options['membership_type_ids'])
       ->addWhere('owner_membership_id', 'IS NULL')
       ->addWhere('contact_id', 'IN', $cids)
       ->setLimit(0)
@@ -134,8 +138,9 @@ class FpptarolesyncUtil {
         ->setLimit(1)
         ->execute()
         ->single();
+      $options = get_option('fpptarolesync_options');
       if (
-        in_array($membership['membership_type_id'], FPPTAROLESYNC_MEMBERSHIP_TYPE_IDS)
+        in_array($membership['membership_type_id'], $options['membership_type_ids'])
         && is_null($membership['owner_membership_id'])
       ) {
         // Only if this membership is of a relevant type, and it's primary
@@ -175,19 +180,21 @@ class FpptarolesyncUtil {
     // of linked memberships which meet the criteria (should be 0 or 1 of them);
     // also fetch the count of contributions with this Contribution ID which
     // have a status of 'pending'.
-    $membershipPaymentGet = civicrm_api3('MembershipPayment', 'get', [
+    $options = get_option('fpptarolesync_options');
+    $membershipPaymentGetParams = [
       'sequential' => 1,
       'contribution_id' => $contributionId,
       'api.Membership.getCount' => [
         'id' => "\$value.membership_id",
         'owner_membership_id' => ['IS NULL' => 1],
-        'membership_type_id' => ['IN' => FPPTAROLESYNC_MEMBERSHIP_TYPE_IDS],
+        'membership_type_id' => ['IN' => $options['membership_type_ids']],
       ],
       'api.Contribution.getCount' => [
         'id' => "\$value.contribution_id",
         'contribution_status_id' => "Pending",
       ],
-    ]);
+    ];
+    $membershipPaymentGet = civicrm_api3('MembershipPayment', 'get', $membershipPaymentGetParams);
     if (
       $membershipPaymentGet['count']
       && $membershipPaymentGet['values'][0]['api.Membership.getCount']
@@ -205,7 +212,7 @@ class FpptarolesyncUtil {
   /**
    * For a given contact, find other contacts who have a current relationship
    * of the appropriate relationship type.
-   * 
+   *
    * @staticvar array $cids Static caching.
    * @param Int $cid
    * @return array An array of the related contact IDs.
@@ -238,7 +245,7 @@ class FpptarolesyncUtil {
   /**
    * For a given array of contact IDs, add or remove the managed role on the
    * contact's WP user record.
-   * 
+   *
    * @param array $cidsToUpdate
    */
   public static function updateRolesForCids($cidsToUpdate) {
@@ -264,23 +271,24 @@ class FpptarolesyncUtil {
       // Start by assuming we're configured. We'll change this below if it's not really so.
       $isConfigured = TRUE;
       $required_configs = [
-        'FPPTAROLESYNC_ROLENAME' => 'string',
-        'FPPTAROLESYNC_MEMBERSHIP_TYPE_IDS' => 'array',
+        'role' => 'string',
+        'membership_type_ids' => 'array',
       ];
+      $options = get_option('fpptarolesync_options');
       foreach ($required_configs as $required_config_name => $required_config_type) {
         if (
-          !defined($required_config_name)
-          || empty(constant($required_config_name))
+          empty($options[$required_config_name])
         ) {
           // Either this config has not been defined, or it's empty. So we're not fully
           // configured.
           $isConfigured = FALSE;
+          break;
         }
         // If we're fully configured, make sure we're correctly configured.
         if ($isConfigured) {
           // validate config type. If config is defined, but it's the wrong type,
           // throw an exception.
-          $config_value = constant($required_config_name);
+          $config_value = $options[$required_config_name];
           $config_value_type = gettype($config_value);
           if ($config_value_type != $required_config_type) {
             throw new Exception("Configuration $required_config_name should be of type: $required_config_type; $config_value_type found.");
@@ -290,6 +298,14 @@ class FpptarolesyncUtil {
     }
     return $isConfigured;
 
+  }
+
+  public static function getPluginData() {
+    static $pluginData;
+    if (!isset($pluginData)) {
+      $pluginData = get_plugin_data(__DIR__ . '/../fpptarolesync.php');
+    }
+    return $pluginData;
   }
 
 }

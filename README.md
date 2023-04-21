@@ -21,7 +21,7 @@ To be qualified for the Manged Role, the user must meet these criteria:
 ### When is the Managed Role added or removed?
 
 * Upon user login
-* Upon modification, creation, or deletion of any of the following CiviCRM entities which are relevant to the qualification; this includes Memberships, Contributions, and Relationships.
+* Upon modification, creation, or deletion of any CiviCRM entities which are relevant to the qualification; this includes Memberships, Contributions, and Relationships.
 
 At those times, the user's qualification for the Managed Role is calculated, and the role is added or removed accordingly.
 
@@ -31,31 +31,17 @@ At those times, the user's qualification for the Managed Role is calculated, and
 * Activate the plugin "CiviCRM Membership Role Sync for FPPTA".
 
 ## Configuration
-There is no user-interface for configuration within WordPress, but configuration is required as explained below.
+Configuration settings are under Uesrs > CiviCRM Membership Role Sync for FPPTA (url: /wp-admin/users.php?page=fpptarolesync_settings)
 
-Even if activated, this plugin will take no action if any of the required configurations (marked "REQUIRED" below) are not set.
+### Required settings
 
-### Configuration in wp-config.php
-Plugin configuration is by PHP constants defined in wp-config.php (or in another file which is run in an equivalent context in the WordPress loading sequence).
+Even if activated, this plugin will take no action if any of these required settings are not set:
 
-Add the following code to your wp-config.php:
+* Relevant Membership Types
+* Managed Role
 
-```php
-// REQUIRED: Machine name of the Managed Role.
-// To get the machine name, you may, for example, note the value of the 'name' column
-// in the output of the wp-cli command `wp role list`.
-define( 'FPPTAROLESYNC_ROLENAME', 'FIXME' );
-
-// REQUIRED: Array of CiviCRM membership type IDs, for Relevant Membership Types.
-// To get the membership type IDs, you may, for example, note ethe value of the
-// 'id' property in the output of the cv command `cv api MembershipType.get sequential=1 return="id,name"`
-define( 'FPPTAROLESYNC_MEMBERSHIP_TYPE_IDS', array( 1, 2 ) );
-
-// OPTIONAL: If this configuration is defined and set to a "true" value, this
-// plugin will log its actions in a custom log file under CiviCRM's ConfigAndLog/
-// directory. The log filename will contain the string 'fpptarolesync'.
-define('FPPTAROLESYNC_LOG', 1);
-```
+### Additional settings
+* Log to File: If yes, this plugin will log its actions in a custom log file under CiviCRM's ConfigAndLog/ directory. The log filename will contain the string 'fpptarolesync'.
 
 ## Support
 
