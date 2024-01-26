@@ -14,7 +14,9 @@ class FpptarolesyncPlugin {
     // Implement hook_civicrm_pre
     add_action('civicrm_pre', [$this, 'civicrm_pre'], 10, 4);
     // Implement wp_login action hook
-    add_action('wp_login', [$this, 'sync_user'], 10, 2);
+    add_action('wp_login', [$this, 'login_user'], 10, 2);
+    // Implement switch_to_user action hook
+    add_action('switch_to_user', [$this, 'switch_user'], 10, 4);
     // For easier in-browser testing, you can enable this line, which will,
     // whenever you view your own WP user profile, fire the same checks as
     // would be done upon login:
@@ -40,15 +42,41 @@ class FpptarolesyncPlugin {
   }
 
   /**
-   * Action handler for user_login action hook.
+   * Take steps to sync user roles.
    */
   public function sync_user(string $user_login, WP_User $user) {
     if (!FpptarolesyncUtil::pluginIsConfigured()) {
       return;
     }
-    FpptarolesyncUtil::debugLog('User login: ' . $user_login, __METHOD__);
+    FpptarolesyncUtil::debugLog('Sync user: ' . $user_login, __METHOD__);
     // Update this user's managed role, as appropriate.
     FpptarolesyncUtil::setUserRole($user, FpptarolesyncUtil::userIsCurrentMember($user->ID));
+  }
+
+  /**
+   * Action handler for user_login action hook.
+   */
+  public function login_user(string $user_login, WP_User $user) {
+    if (!FpptarolesyncUtil::pluginIsConfigured()) {
+      return;
+    }
+    FpptarolesyncUtil::debugLog('User login: ' . $user_login, __METHOD__);
+    // Update this user's managed role, as appropriate.
+    $this->sync_user($user->user_login, $user);
+  }
+
+  /**
+   * Action handler for switch_to_user action hook.
+   */
+  public function switch_user(int $userId, int $oldUserId, string $newToken, string $oldToken) {
+    if (!FpptarolesyncUtil::pluginIsConfigured()) {
+      return;
+    }
+    FpptarolesyncUtil::debugLog('Switch user: ' . json_encode(func_get_args()), __METHOD__);
+    // Load user
+    $user = new WP_User($userId);
+    // Update this user's managed role, as appropriate.
+    FpptarolesyncUtil::setUserRole($user, FpptarolesyncUtil::userIsCurrentMember($userId));
   }
 
   /**
