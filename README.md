@@ -20,7 +20,8 @@ To be qualified for the Manged Role, the user must meet these criteria:
 
 ### When is the Managed Role added or removed?
 
-* Upon user login
+* Upon user login.
+* Upon user switching through the features of "User Switching" plugin.
 * Upon modification, creation, or deletion of any CiviCRM entities which are relevant to the qualification; this includes Memberships, Contributions, and Relationships.
 
 At those times, the user's qualification for the Managed Role is calculated, and the role is added or removed accordingly.
