@@ -83,6 +83,8 @@ class FpptarolesyncUtil {
         ->addWhere('id', '=', '$status_id'),
       0)
       ->execute();
+    FpptarolesyncUtil::debugLog("User'{$userId}': criteria: 'membership_type_id', 'IN', ". json_encode($options['membership_type_ids']) ."; 'contact_id', 'IN', " . json_encode($cids), __METHOD__);
+    FpptarolesyncUtil::debugLog("User'{$userId}': membership api result: ". var_export((array)$memberships, 1), __METHOD__);
     if ($memberships->rowCount == 0) {
       // No memberships found? User is not qualified.
       FpptarolesyncUtil::debugLog("User'{$userId}' does NOT qualify (No related memberships found).", __METHOD__);
